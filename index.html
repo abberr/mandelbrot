@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        canvas {
+            border: 1px solid #d3d3d3;
+            background-color: #f1f1f1;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body onload="startGame()">
+<script src="Complex.js"></script>
+<script>
+
+    var edges = []
+
+    function startGame() {
+        myGameArea.start();
+
+        var startTime = new Date().getTime()
+
+        var start = new Complex(0, 0)
+
+        //Mandebrot
+        for (var x = 0; x < 1000; x++) {
+            for (var y = 0; y < 1000; y++) {
+                var c = new Complex(-1 + x/500, -1 + y/500)
+                var numbers = [start]
+                for (var i = 1; i < 20; i++) {
+                    var nextNumber = numbers[i-1].square().plus(c)
+                    if (nextNumber.real < -20 || nextNumber.real > 20 || nextNumber.im < -20 || nextNumber.im > 20) {
+                        edges.push(c)
+                        break;
+                    }
+                    numbers.push(nextNumber)
+                }
+                var last = numbers.pop()
+                if (last.real < -20 || last.real > 20 || last.im < -20 || last.real > 20) {
+                    // edges.push(c)
+                }
+            }
+        }
+
+        console.log(new Date().getTime() - startTime)
+
+
+    }
+
+    var width, height;
+    var scale = 300;
+    var startNumber = new Complex(0, 0)
+    var c = new Complex(0, 0)
+    var movingC = false;
+    var movingStart = false;
+
+    var myGameArea = {
+        canvas: document.createElement("canvas"),
+        start: function () {
+            width = this.canvas.width = window.innerWidth;
+            height = this.canvas.height = window.innerHeight;
+            this.context = this.canvas.getContext("2d");
+            this.context.translate(width / 2, height / 2);
+            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+            this.frameNo = 0;
+            this.interval = setInterval(updateCanvas, 20);
+
+            this.canvas.addEventListener("mousedown", doMouseDown, false);
+            this.canvas.addEventListener("mousemove", doMouseMove, false);
+            this.canvas.addEventListener("mouseup", doMouseUp, false);
+
+
+        },
+        clear: function () {
+            this.context.clearRect(-this.canvas.width, -this.canvas.width, this.canvas.width * 2, this.canvas.height * 2);
+        }
+    }
+
+    function doMouseDown(event) {
+        var x = event.pageX;
+        var y = event.pageY;
+        if (Math.hypot(x - (c.real * scale + width / 2), y - (c.im * scale + height / 2)) < 20) {
+            movingC = true
+        } else if (Math.hypot(x - (startNumber.real * scale + width / 2), y - (startNumber.im * scale + height / 2)) < 20) {
+            movingStart = true
+        }
+
+    }
+
+    function doMouseUp(event) {
+        movingC = false;
+        movingStart = false;
+    }
+
+    function doMouseMove(event) {
+        if (movingC) {
+            c = new Complex((event.pageX - width / 2) / scale, (event.pageY - height / 2) / scale)
+        } else if (movingStart) {
+            startNumber = new Complex((event.pageX - width / 2) / scale, (event.pageY - height / 2) / scale)
+        }
+    }
+
+    function updateCanvas() {
+        myGameArea.clear();
+        myGameArea.frameNo += 1;
+
+        //Draw circle
+        myGameArea.context.strokeStyle = 'rgb(50, 50, 50)';
+        myGameArea.context.lineWidth = 3;
+        myGameArea.context.beginPath();
+        myGameArea.context.arc(0, 0, scale, degToRad(0), degToRad(360), false);
+        myGameArea.context.stroke();
+
+        var numbers = [startNumber];
+        for (var i = 1; i < 50; i++) {
+            var nextNumber = numbers[i - 1].square().plus(this.c);
+            numbers.push(nextNumber);
+        }
+
+        //Draw boxes
+        for (i = 0; i < numbers.length; i++) {
+            var current = numbers[i];
+            myGameArea.context.fillStyle = 'gray';
+            myGameArea.context.beginPath();
+            myGameArea.context.arc((current.real * scale), (current.im * scale), 5, degToRad(0), degToRad(360), false);
+            myGameArea.context.stroke();
+            myGameArea.context.fill();
+            //Draw lines
+            if (i > 0) {
+                var prev = numbers[i - 1];
+                myGameArea.context.fillStyle = 'rgb(0, 0, 255)';
+                myGameArea.context.lineWidth = 1;
+                myGameArea.context.beginPath();
+                myGameArea.context.moveTo(prev.real * scale, prev.im * scale);
+                myGameArea.context.lineTo(current.real * scale, current.im * scale);
+                myGameArea.context.stroke();
+            }
+        }
+
+        //Draw C and Start
+        myGameArea.context.beginPath();
+        myGameArea.context.arc((c.real * scale), (c.im * scale), 10, degToRad(0), degToRad(360), false);
+        myGameArea.context.fill();
+        myGameArea.context.fillStyle = 'rgb(255, 255, 255)';
+        myGameArea.context.font = '12px arial';
+        myGameArea.context.fillText("C", (c.real * scale) - 7, c.im * scale, 20)
+        myGameArea.context.fillStyle = 'rgb(100, 100, 100)';
+        myGameArea.context.beginPath();
+        myGameArea.context.arc((startNumber.real * scale), (startNumber.im * scale), 10, degToRad(0), degToRad(360), false);
+        myGameArea.context.fill();
+
+
+        //Exp
+        for (i = 0; i < edges.length; i++) {
+            var n = edges[i];
+            myGameArea.context.fillStyle = 'rgb(100, 100, 100)';
+            myGameArea.context.beginPath();
+            myGameArea.context.arc((n.real * scale), (n.im * scale), 0.5, degToRad(0), degToRad(360), false);
+            myGameArea.context.fill();
+        }
+
+    }
+
+
+    function everyinterval(n) {
+        if ((myGameArea.frameNo / n) % 1 == 0) {
+            return true;
+        }
+        return false;
+    }
+
+    function degToRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+</script>
+<br>
+<button onmousedown="accelerate(-0.2)">A</button>
+<button onmousedown="accelerate(-0.2)">C</button>
+</body>
+</html>
